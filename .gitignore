@@ -1,0 +1,63 @@
+# ============================================================
+# Customer Finance 360° Intelligence Platform
+# Git Ignore Rules
+# ============================================================
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# --- Virtual Environment ---
+venv/
+.venv/
+env/
+ENV/
+
+# --- Environment Variables (contains credentials) ---
+.env
+
+# --- Data Files (too large for Git) ---
+data/raw/*.csv
+data/raw/*.xlsx
+data/processed/*.csv
+data/processed/*.parquet
+data/output/*.csv
+data/output/*.xlsx
+data/output/*.json
+
+# --- ML Model Artifacts ---
+models/*.pkl
+models/*.joblib
+models/*.h5
+
+# --- Jupyter Notebooks ---
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# --- Power BI Temp Files ---
+dashboards/*.pbit
+dashboards/*.tmp
+dashboards/~*
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Logs ---
+*.log
+logs/
+
+data/processed/sparkov_patterns.json

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Data Quality Report - Customer Finance 360</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; }
+        .summary-card { background: #2ecc71; color: white; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px; }
+        .summary-card h2 { color: white; margin: 0 0 10px 0; font-size: 2em; }
+        .stats { display: flex; justify-content: space-around; margin-bottom: 30px; background: #ecf0f1; padding: 15px; border-radius: 8px; }
+        .stat-box { text-align: center; }
+        .stat-box .value { font-size: 1.5em; font-weight: bold; color: #2c3e50; }
+        .stat-box .label { font-size: 0.9em; color: #7f8c8d; text-transform: uppercase; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 0.95em; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #34495e; color: white; }
+        tr:hover { background-color: #f5f5f5; }
+        .status-PASS { color: #27ae60; font-weight: bold; }
+        .status-FAIL { color: #c0392b; font-weight: bold; }
+        .status-WARN { color: #f39c12; font-weight: bold; }
+        .actions { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; border-radius: 4px; }
+        .actions h3 { margin-top: 0; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Customer Finance 360&deg; Intelligence Platform</h1>
+        <h2>Data Quality Validation Report</h2>
+        <p><strong>Generated:</strong> 2026-06-27T00:09:43.626926</p>
+        
+        <div class="summary-card">
+            <h2>Data Quality Score: 100.0%</h2>
+            <p>&#9989; Ready for Analytics</p>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-box"><div class="value">51</div><div class="label">Total Checks</div></div>
+            <div class="stat-box"><div class="value" style="color: #27ae60;">51</div><div class="label">Passed</div></div>
+            <div class="stat-box"><div class="value" style="color: #c0392b;">0</div><div class="label">Failed</div></div>
+            <div class="stat-box"><div class="value" style="color: #f39c12;">0</div><div class="label">Warnings</div></div>
+        </div>
+        
+        <h3>Detailed Results</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Table</th>
+                    <th>Check</th>
+                    <th>Status</th>
+                    <th>Detail</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>table_exists</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>Table exists</td>
+                </tr>
+
+                <tr>
+                    <td>dim_product</td>
+                    <td>table_exists</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>Table exists</td>
+                </tr>
+
+                <tr>
+                    <td>dim_campaign</td>
+                    <td>table_exists</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>Table exists</td>
+                </tr>
+
+                <tr>
+                    <td>dim_date</td>
+                    <td>table_exists</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>Table exists</td>
+                </tr>
+
+                <tr>
+                    <td>fact_transactions</td>
+                    <td>table_exists</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>Table exists</td>
+                </tr>
+
+                <tr>
+                    <td>fact_service_logs</td>
+                    <td>table_exists</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>Table exists</td>
+                </tr>
+
+                <tr>
+                    <td>fact_campaign_responses</td>
+                    <td>table_exists</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>Table exists</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>row_count</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>10,127 rows (min: 10,000)</td>
+                </tr>
+
+                <tr>
+                    <td>dim_product</td>
+                    <td>row_count</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>12 rows (min: 10)</td>
+                </tr>
+
+                <tr>
+                    <td>dim_campaign</td>
+                    <td>row_count</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>5 rows (min: 5)</td>
+                </tr>
+
+                <tr>
+                    <td>dim_date</td>
+                    <td>row_count</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>2,192 rows (min: 2,000)</td>
+                </tr>
+
+                <tr>
+                    <td>fact_transactions</td>
+                    <td>row_count</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>656,824 rows (min: 100,000)</td>
+                </tr>
+
+                <tr>
+                    <td>fact_service_logs</td>
+                    <td>row_count</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>25,293 rows (min: 5,000)</td>
+                </tr>
+
+                <tr>
+                    <td>fact_campaign_responses</td>
+                    <td>row_count</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>14,142 rows (min: 1,000)</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>pk_unique</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No duplicate customer_id</td>
+                </tr>
+
+                <tr>
+                    <td>dim_product</td>
+                    <td>pk_unique</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No duplicate product_id</td>
+                </tr>
+
+                <tr>
+                    <td>dim_campaign</td>
+                    <td>pk_unique</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No duplicate campaign_id</td>
+                </tr>
+
+                <tr>
+                    <td>dim_date</td>
+                    <td>pk_unique</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No duplicate date_key</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>null_customer_id</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>null_customer_status</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>null_age</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>null_gender</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>null_income_bracket</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>null_card_category</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>null_credit_limit</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>null_total_trans_amt_12m</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_transactions</td>
+                    <td>null_customer_id</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_transactions</td>
+                    <td>null_amount</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_transactions</td>
+                    <td>null_transaction_date</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_transactions</td>
+                    <td>null_merchant_category</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_service_logs</td>
+                    <td>null_customer_id</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_service_logs</td>
+                    <td>null_complaint_date</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_service_logs</td>
+                    <td>null_complaint_category</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_service_logs</td>
+                    <td>null_priority</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_campaign_responses</td>
+                    <td>null_campaign_id</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_campaign_responses</td>
+                    <td>null_customer_id</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_campaign_responses</td>
+                    <td>null_was_contacted</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>No NULLs</td>
+                </tr>
+
+                <tr>
+                    <td>fact_transactions</td>
+                    <td>fk_customer_id</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>All customer_id reference valid dim_customer</td>
+                </tr>
+
+                <tr>
+                    <td>fact_transactions</td>
+                    <td>fk_product_id</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>All product_id reference valid dim_product</td>
+                </tr>
+
+                <tr>
+                    <td>fact_transactions</td>
+                    <td>fk_date_key</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>All date_key reference valid dim_date</td>
+                </tr>
+
+                <tr>
+                    <td>fact_service_logs</td>
+                    <td>fk_customer_id</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>All customer_id reference valid dim_customer</td>
+                </tr>
+
+                <tr>
+                    <td>fact_service_logs</td>
+                    <td>fk_date_key</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>All date_key reference valid dim_date</td>
+                </tr>
+
+                <tr>
+                    <td>fact_campaign_responses</td>
+                    <td>fk_customer_id</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>All customer_id reference valid dim_customer</td>
+                </tr>
+
+                <tr>
+                    <td>fact_campaign_responses</td>
+                    <td>fk_campaign_id</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>All campaign_id reference valid dim_campaign</td>
+                </tr>
+
+                <tr>
+                    <td>fact_campaign_responses</td>
+                    <td>fk_date_key</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>All date_key reference valid dim_date</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>age_range</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>0 customers outside 18-100 age range</td>
+                </tr>
+
+                <tr>
+                    <td>fact_service_logs</td>
+                    <td>csat_range</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>0 records with CSAT outside 1-5</td>
+                </tr>
+
+                <tr>
+                    <td>fact_transactions</td>
+                    <td>positive_amounts</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>0 transactions with zero/negative amount</td>
+                </tr>
+
+                <tr>
+                    <td>dim_customer</td>
+                    <td>valid_status</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>0 invalid customer_status values</td>
+                </tr>
+
+                <tr>
+                    <td>fact_campaign_responses</td>
+                    <td>funnel_logic</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>0 records with broken funnel sequence</td>
+                </tr>
+
+                <tr>
+                    <td>fact_transactions</td>
+                    <td>no_future_dates</td>
+                    <td class="status-PASS">&#9989; PASS</td>
+                    <td>0 transactions with future dates</td>
+                </tr>
+
+            </tbody>
+        </table>
+
+    </div>
+</body>
+</html>
