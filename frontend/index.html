@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FinSight 360 AI Assistant</title>
+    <meta name="description" content="AI-powered customer intelligence assistant for retail banking analytics — CLV, churn, segmentation, and revenue insights." />
+    
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet"/>
+    
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#3f465c",
+                        "primary-fixed": "#dae2fd",
+                        "surface-tint": "#bec6e0",
+                        "on-primary-container": "#798098",
+                        "tertiary": "#b9c7e0",
+                        "on-secondary-container": "#00344e",
+                        "on-background": "#e0e3e5",
+                        "surface-bright": "#363a3b",
+                        "tertiary-fixed-dim": "#b9c7e0",
+                        "on-error": "#690005",
+                        "primary-container": "#0f172a",
+                        "secondary-fixed-dim": "#89ceff",
+                        "on-tertiary-fixed-variant": "#3a485c",
+                        "on-primary-fixed": "#131b2e",
+                        "secondary-container": "#00a2e6",
+                        "on-secondary-fixed": "#001e2f",
+                        "surface-container-high": "#272a2c",
+                        "on-tertiary-fixed": "#0d1c2f",
+                        "secondary-fixed": "#c9e6ff",
+                        "inverse-surface": "#e0e3e5",
+                        "outline-variant": "#45464d",
+                        "surface": "#101415",
+                        "inverse-on-surface": "#2d3133",
+                        "surface-dim": "#101415",
+                        "primary": "#bec6e0",
+                        "background": "#101415",
+                        "error-container": "#93000a",
+                        "on-secondary": "#00344d",
+                        "on-primary": "#283044",
+                        "secondary": "#89ceff",
+                        "on-surface": "#e0e3e5",
+                        "on-tertiary-container": "#738298",
+                        "inverse-primary": "#565e74",
+                        "on-tertiary": "#233144",
+                        "surface-container-low": "#191c1e",
+                        "surface-container": "#1d2022",
+                        "surface-container-highest": "#323537",
+                        "surface-variant": "#323537",
+                        "on-error-container": "#ffdad6",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-secondary-fixed-variant": "#004c6e",
+                        "outline": "#909097",
+                        "tertiary-fixed": "#d5e3fd",
+                        "error": "#ffb4ab",
+                        "tertiary-container": "#09182a",
+                        "on-surface-variant": "#c6c6cd",
+                        "surface-container-lowest": "#0b0f10"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "unit": "4px",
+                        "density-comfortable": "12px",
+                        "container-padding": "24px",
+                        "density-compact": "4px",
+                        "density-spacious": "24px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "tabular-data": ["Geist"],
+                        "headline-sm": ["Geist"],
+                        "body-sm": ["Geist"],
+                        "body-md": ["Geist"],
+                        "display-lg": ["Geist"],
+                        "body-lg": ["Geist"],
+                        "code-block": ["JetBrains Mono"],
+                        "headline-md": ["Geist"],
+                        "label-caps": ["Geist"]
+                    },
+                    "fontSize": {
+                        "tabular-data": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+                        "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "400" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "code-block": ["13px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "label-caps": ["11px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined[data-weight="fill"] {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        /* Custom scrollbar for table container */
+        .table-scroll::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-scroll::-webkit-scrollbar-track {
+            background: #101415; 
+        }
+        .table-scroll::-webkit-scrollbar-thumb {
+            background: #323537; 
+            border-radius: 4px;
+        }
+        .table-scroll::-webkit-scrollbar-thumb:hover {
+            background: #45464d; 
+        }
+    </style>
+  </head>
+  <body class="bg-background text-on-surface font-body-md text-body-md m-0 p-0 overflow-hidden flex h-screen w-screen">
+    <div id="root" class="h-full w-full"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

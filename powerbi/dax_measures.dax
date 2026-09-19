@@ -1,0 +1,300 @@
+-- ============================================================
+-- FinSight 360 — DAX Measures Reference
+-- ============================================================
+-- Every measure below is used by at least one visual
+-- Create a dedicated "_Measures" table in Power BI:
+--   Enter Data → single dummy column → delete column → add measures
+-- ============================================================
+
+
+-- ============================================================
+-- REVENUE MEASURES (5 measures, used on Page 1 + Page 3)
+-- ============================================================
+
+-- Page 1: KPI Card #3, Area Chart Y-axis, Donut Values, Map Color,
+--          Stacked Bar Values, Treemap Values (Page 2)
+Total Revenue = 
+    SUM(fact_transactions[amount])
+
+-- Page 3: Combo Chart column axis
+Total Transactions = 
+    COUNTROWS(fact_transactions)
+
+-- Page 1: Revenue Area Chart tooltip
+Avg Transaction Value = 
+    DIVIDE([Total Revenue], [Total Transactions], 0)
+
+-- Used by: Revenue QoQ Trend indicator, Area Chart tooltip
+Revenue QoQ % = 
+    VAR _Curr = [Total Revenue]
+    VAR _Prev = CALCULATE([Total Revenue], DATEADD(dim_date[full_date], -1, QUARTER))
+    RETURN DIVIDE(_Curr - _Prev, _Prev, 0)
+
+
+-- ============================================================
+-- CUSTOMER MEASURES (5 measures, used on Page 1 + Page 2)
+-- ============================================================
+
+-- Page 1: KPI Card #1, Map tooltip, Insight strip
+Total Customers = 
+    DISTINCTCOUNT(dim_customer[customer_id])
+
+-- Page 1: KPI Card #2
+Active Customers = 
+    CALCULATE([Total Customers], dim_customer[customer_status] = "Active")
+
+-- Page 1: KPI Card #4, Page 3 context
+Churn Rate % = 
+    DIVIDE(
+        CALCULATE([Total Customers], dim_customer[customer_status] = "Churned"),
+        [Total Customers], 0
+    )
+
+-- Page 1: Insight strip
+Retention Rate % = 
+    1 - [Churn Rate %]
+
+-- Page 2: KPI Card #3
+Avg Tenure Months = 
+    AVERAGE(dim_customer[customer_tenure_months])
+
+
+-- ============================================================
+-- CLV MEASURES (3 measures, used on Page 2)
+-- ============================================================
+
+-- Page 2: KPI Card #1, Grouped Bar Chart X-axis
+Avg Predicted CLV = 
+    AVERAGE(v_customer_clv_predictions[predicted_clv_12m])
+
+-- Page 2: KPI Card #4
+Total Future Portfolio Value = 
+    SUM(v_customer_clv_predictions[predicted_clv_12m])
+
+-- Page 2: Top 10 Table, ranking
+Customer Predictive CLV Rank = 
+    RANKX(ALL(v_customer_clv_predictions), [Avg Predicted CLV],, DESC)
+
+
+-- ============================================================
+-- CHURN / ML MEASURES (3 measures, used on Page 3)
+-- ============================================================
+
+-- Page 3: KPI Card #3
+Avg Churn Probability = 
+    AVERAGE(ml_churn_predictions[churn_probability])
+
+-- Page 3: KPI Card #2, Insight strip
+High Risk Customers = 
+    CALCULATE(
+        DISTINCTCOUNT(ml_churn_predictions[customer_id]),
+        ml_churn_predictions[churn_risk_tier] = "High Risk"
+    )
+
+-- Page 3: KPI Card #1, Insight strip
+-- Expected loss = Annual Revenue × Churn Probability (probability-weighted)
+Revenue at Risk = 
+    SUMX(
+        ml_churn_predictions,
+        RELATED(dim_customer[total_trans_amt_12m]) * ml_churn_predictions[churn_probability]
+    )
+
+
+-- ============================================================
+-- CAMPAIGN MEASURES (used on Page 3)
+-- ============================================================
+
+-- Page 3: Insight strip context
+Campaign Acceptance Rate % = 
+    DIVIDE(
+        CALCULATE(COUNTROWS(fact_campaign_responses), fact_campaign_responses[was_accepted] = TRUE),
+        COUNTROWS(fact_campaign_responses), 0
+    )
+
+-- Page 3: KPI Card #4
+Campaign ROI % = 
+    VAR _Revenue = SUM(fact_campaign_responses[conversion_value])
+    VAR _Budget = SUM(dim_campaign[budget])
+    RETURN DIVIDE(_Revenue - _Budget, _Budget, 0)
+
+-- Page 3: Funnel Chart (these 4 are treated as 1 logical funnel set)
+Funnel Targeted = COUNTROWS(fact_campaign_responses)
+Funnel Contacted = CALCULATE(COUNTROWS(fact_campaign_responses), fact_campaign_responses[was_contacted] = TRUE)
+Funnel Opened = CALCULATE(COUNTROWS(fact_campaign_responses), fact_campaign_responses[was_opened] = TRUE)
+Funnel Accepted = CALCULATE(COUNTROWS(fact_campaign_responses), fact_campaign_responses[was_accepted] = TRUE)
+
+
+-- ============================================================
+-- SERVICE MEASURE (1 measure, used on Page 3)
+-- ============================================================
+
+-- Page 3: KPI Card #5
+Avg CSAT = 
+    AVERAGE(fact_service_logs[csat_score])
+
+
+-- ============================================================
+-- CONDITIONAL FORMATTING (1 measure)
+-- ============================================================
+
+-- Page 1: KPI Card #4 background color
+Churn Rate Color = 
+    IF([Churn Rate %] > 0.20, "#FF4560",
+    IF([Churn Rate %] > 0.15, "#FEB019", "#00E396"))
+
+
+-- ============================================================
+-- TREND INDICATORS (KPI Card Subtitles)
+-- ============================================================
+-- Only real time-based QoQ trends and meaningful target comparisons.
+-- Display as "Reference label" in New Card visual or subtitle text.
+-- Cards without a trend measure show value only (no forced comparisons).
+-- ============================================================
+
+-- Page 1 Card #3: Revenue (QoQ, fact-based)
+Revenue Trend = 
+    VAR _Pct = [Revenue QoQ %]
+    RETURN IF(_Pct >= 0,
+        "▲ " & FORMAT(_Pct, "0.0%") & " vs Prev Qtr",
+        "▼ " & FORMAT(ABS(_Pct), "0.0%") & " vs Prev Qtr")
+
+-- Page 1 Cards #1 & #2: Customers (QoQ, fact-based)
+-- Uses transacting customers from fact_transactions for time-aware comparison
+Customer Trend = 
+    VAR _Curr = DISTINCTCOUNT(fact_transactions[customer_id])
+    VAR _Prev = CALCULATE(
+        DISTINCTCOUNT(fact_transactions[customer_id]),
+        DATEADD(dim_date[full_date], -1, QUARTER)
+    )
+    VAR _Pct = DIVIDE(_Curr - _Prev, _Prev, 0)
+    RETURN IF(_Pct >= 0,
+        "▲ " & FORMAT(_Pct, "0.0%") & " vs Prev Qtr",
+        "▼ " & FORMAT(ABS(_Pct), "0.0%") & " vs Prev Qtr")
+
+-- Page 1 Card #4: Churn Rate vs 15% industry target
+Churn Rate Trend = 
+    VAR _Rate = [Churn Rate %]
+    VAR _Target = 0.15
+    VAR _Diff = _Rate - _Target
+    RETURN IF(_Diff <= 0,
+        "▼ " & FORMAT(ABS(_Diff) * 100, "0.0") & " pp below target",
+        "▲ " & FORMAT(_Diff * 100, "0.0") & " pp above target")
+
+-- Page 3 Card #1: Revenue at Risk as % of portfolio
+Risk Exposure Trend = 
+    VAR _Pct = DIVIDE([Revenue at Risk], [Total Revenue], 0)
+    RETURN "▲ " & FORMAT(_Pct, "0.0%") & " of portfolio revenue"
+
+-- Page 3 Card #4: Campaign ROI (QoQ, fact-based)
+Campaign ROI Trend = 
+    VAR _Curr = [Campaign ROI %]
+    VAR _Prev = CALCULATE([Campaign ROI %], DATEADD(dim_date[full_date], -1, QUARTER))
+    VAR _Diff = _Curr - _Prev
+    RETURN IF(_Diff >= 0,
+        "▲ " & FORMAT(_Diff * 100, "0.0") & " pp vs Prev Qtr",
+        "▼ " & FORMAT(ABS(_Diff) * 100, "0.0") & " pp vs Prev Qtr")
+
+-- Page 3 Card #5: CSAT (QoQ, fact-based)
+CSAT Trend = 
+    VAR _Curr = [Avg CSAT]
+    VAR _Prev = CALCULATE([Avg CSAT], DATEADD(dim_date[full_date], -1, QUARTER))
+    VAR _Diff = _Curr - _Prev
+    RETURN IF(_Diff >= 0,
+        "▲ " & FORMAT(_Diff, "0.0") & " pts vs Prev Qtr",
+        "▼ " & FORMAT(ABS(_Diff), "0.0") & " pts vs Prev Qtr")
+
+
+-- ============================================================
+-- CALCULATED COLUMN (on ml_churn_predictions table)
+-- ============================================================
+-- Not a measure — add as a Calculated Column on ml_churn_predictions
+
+Recommended Action = 
+    VAR _Driver = ml_churn_predictions[top_risk_driver_1]
+    VAR _Risk = ml_churn_predictions[churn_risk_tier]
+    RETURN
+    SWITCH(TRUE(),
+        _Risk = "High Risk" && _Driver = "Low Transaction Count",        "Trigger engagement offer",
+        _Risk = "High Risk" && _Driver = "Extended Inactivity",          "Assign retention agent",
+        _Risk = "High Risk" && _Driver = "Txn Frequency Drop (Q4/Q1)",  "Send re-engagement campaign",
+        _Risk = "High Risk" && _Driver = "High Service Contacts",       "Escalate to relationship mgr",
+        _Risk = "High Risk" && _Driver = "Declining Transaction Value", "Offer loyalty incentive",
+        _Risk = "High Risk",                                             "Review & offer incentive",
+        _Risk = "Medium Risk",                                           "Monitor & include in campaign",
+        "No action required"
+    )
+
+
+-- ============================================================
+-- MEASURE SUMMARY
+-- ============================================================
+-- Core:       16 analytical measures
+-- Formatting:  1 (Churn Rate Color)
+-- Trends:      6 (Revenue, Customer, Churn Rate, Risk Exposure,
+--                 Campaign ROI, CSAT)
+-- Column:      1 (Recommended Action)
+-- Total:      23 measures + 1 calculated column
+-- ============================================================
+
+-- ============================================================
+-- CAMPAIGN TARGETING & EXPERIMENTATION MEASURES
+-- ============================================================
+
+Targetable Customers = 
+    DISTINCTCOUNT(ml_campaign_propensity[customer_id])
+
+High Propensity Customers = 
+    CALCULATE(
+        DISTINCTCOUNT(ml_campaign_propensity[customer_id]),
+        ml_campaign_propensity[propensity_tier] = "High"
+    )
+
+Average Propensity = 
+    AVERAGE(ml_campaign_propensity[propensity_score])
+
+Average Target Priority = 
+    AVERAGE(ml_campaign_propensity[target_priority_score])
+
+High Priority Customers = 
+    CALCULATE(
+        DISTINCTCOUNT(ml_campaign_propensity[customer_id]),
+        ml_campaign_propensity[priority_tier] = "High"
+    )
+
+Control Conversion Rate = 
+    DIVIDE(
+        CALCULATE(
+            COUNTROWS(campaign_experiment_outcomes),
+            campaign_experiment_outcomes[assignment_group] = "Control",
+            campaign_experiment_outcomes[converted] = TRUE
+        ),
+        CALCULATE(
+            COUNTROWS(campaign_experiment_outcomes),
+            campaign_experiment_outcomes[assignment_group] = "Control"
+        ),
+        0
+    )
+
+Treatment Conversion Rate = 
+    DIVIDE(
+        CALCULATE(
+            COUNTROWS(campaign_experiment_outcomes),
+            campaign_experiment_outcomes[assignment_group] = "Treatment",
+            campaign_experiment_outcomes[converted] = TRUE
+        ),
+        CALCULATE(
+            COUNTROWS(campaign_experiment_outcomes),
+            campaign_experiment_outcomes[assignment_group] = "Treatment"
+        ),
+        0
+    )
+
+Absolute Lift = 
+    [Treatment Conversion Rate] - [Control Conversion Rate]
+
+Relative Lift = 
+    DIVIDE([Absolute Lift], [Control Conversion Rate], 0)
+
+Average Campaign P Value = 
+    AVERAGE(campaign_experiment_metrics[p_value])
+

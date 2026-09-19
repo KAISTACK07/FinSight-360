@@ -184,26 +184,23 @@ def generate_transactions(
             patterns = _get_default_patterns()
 
     # Category setup
-    categories = list(patterns["category_proportions"].keys())
-    cat_probs = np.array([patterns["category_proportions"][c] for c in categories])
-    cat_probs = cat_probs / cat_probs.sum()  # Ensure sums to 1
+    base_categories = list(patterns["category_proportions"].keys())
+    banking_categories = ["Salary Credit", "Investment Activity", "EMI / Loan Payment", "ATM Withdrawal", "Utilities"]
+    all_categories = base_categories + banking_categories
 
     # Amount stats per category
     amt_stats = patterns.get("amount_stats", {})
 
-    # Channel weights by card category
-    channel_weights = {
-        "Blue": {"UPI": 0.30, "Debit Card": 0.25, "Mobile Banking": 0.15,
-                 "Net Banking": 0.10, "Credit Card": 0.10, "ATM": 0.05, "POS": 0.05},
-        "Silver": {"Credit Card": 0.25, "UPI": 0.20, "Net Banking": 0.15,
-                   "Mobile Banking": 0.15, "Debit Card": 0.10, "NEFT": 0.05,
-                   "IMPS": 0.05, "POS": 0.05},
-        "Gold": {"Credit Card": 0.30, "Net Banking": 0.20, "Mobile Banking": 0.15,
-                 "UPI": 0.10, "NEFT": 0.10, "IMPS": 0.05, "POS": 0.05, "RTGS": 0.05},
-        "Platinum": {"Credit Card": 0.35, "Net Banking": 0.20, "NEFT": 0.10,
-                     "Mobile Banking": 0.10, "RTGS": 0.10, "IMPS": 0.05,
-                     "UPI": 0.05, "POS": 0.05},
-    }
+    # Build seasonal day probabilities globally for realism
+    max_days = 366
+    day_weights = np.ones(max_days)
+    for i in range(max_days):
+        dt_sample = pd.Timestamp("2024-01-01") + pd.Timedelta(days=i)
+        if dt_sample.day <= 7 or dt_sample.day >= 28: day_weights[i] *= 1.5 # Salary weeks
+        if dt_sample.month in [3, 6, 9, 12] and dt_sample.day > 20: day_weights[i] *= 1.3 # Quarter ends
+        if dt_sample.month == 10 and dt_sample.day > 15: day_weights[i] *= 1.8 # Diwali run-up
+        if dt_sample.month == 11 and dt_sample.day <= 5: day_weights[i] *= 1.8 # Diwali week
+    base_day_probs = day_weights / day_weights.sum()
 
     all_transactions = []
     batch_count = 0
@@ -236,14 +233,20 @@ def generate_transactions(
         # --- Generate Transaction Dates ---
         if is_churned:
             # Churned customers: declining frequency in last 3 months
-            # 70% of transactions in first 9 months, 30% in last 3
             n_early = int(n_trans * 0.70)
             n_late = n_trans - n_early
             early_days = rng.integers(0, max(1, int(date_range_days * 0.75)), size=n_early)
             late_days = rng.integers(int(date_range_days * 0.75), max(int(date_range_days * 0.75) + 1, date_range_days), size=n_late)
             trans_days = np.concatenate([early_days, late_days])
         else:
-            trans_days = rng.integers(0, max(1, date_range_days), size=n_trans)
+            # Active customers: Apply seasonal probabilities
+            allowed_days = max(1, date_range_days)
+            if allowed_days <= max_days:
+                probs = base_day_probs[:allowed_days]
+                probs = probs / probs.sum()
+                trans_days = rng.choice(allowed_days, size=n_trans, p=probs)
+            else:
+                trans_days = rng.integers(0, allowed_days, size=n_trans)
 
         trans_dates = [start_date + pd.Timedelta(days=int(d)) for d in sorted(trans_days)]
 
@@ -253,8 +256,56 @@ def generate_transactions(
             minute = rng.integers(0, 60)
             trans_dates[i] = trans_dates[i].replace(hour=int(hour), minute=int(minute))
 
-        # --- Generate Categories ---
-        trans_categories = rng.choice(categories, size=n_trans, p=cat_probs)
+        # --- Generate Categories & Channels based on Archetype ---
+        inc_bracket = cust.get("income_bracket", "Below ₹4L")
+        income_score = {"Above ₹15L": 4, "₹8L - ₹15L": 3, "₹4L - ₹8L": 2, "Below ₹4L": 1}.get(inc_bracket, 1)
+
+        if income_score >= 3:
+            # Premium
+            archetype_probs = {
+                "Travel": 0.15, "Investment Activity": 0.10, "Online Shopping": 0.15,
+                "Food & Dining": 0.10, "EMI / Loan Payment": 0.05, "Salary Credit": 0.01,
+                "Utilities": 0.05, "Groceries": 0.05, "ATM Withdrawal": 0.02
+            }
+            ch_probs = {"Credit Card": 0.50, "Net Banking": 0.30, "UPI": 0.10, "Mobile Banking": 0.10}
+        elif tenure_months >= 36:
+            # Loyal
+            archetype_probs = {
+                "Utilities": 0.15, "Groceries": 0.15, "Health & Fitness": 0.10,
+                "EMI / Loan Payment": 0.10, "Salary Credit": 0.01, "Food & Dining": 0.05,
+                "Travel": 0.05, "ATM Withdrawal": 0.05
+            }
+            ch_probs = {"Debit Card": 0.30, "UPI": 0.30, "Net Banking": 0.20, "Credit Card": 0.10, "ATM": 0.10}
+        elif rng.random() > 0.4:
+            # Growth
+            archetype_probs = {
+                "Food & Dining": 0.15, "Entertainment": 0.10, "Online Shopping": 0.15,
+                "EMI / Loan Payment": 0.15, "Salary Credit": 0.01, "Travel": 0.05,
+                "ATM Withdrawal": 0.05
+            }
+            ch_probs = {"UPI": 0.40, "Mobile Banking": 0.30, "Credit Card": 0.20, "Net Banking": 0.10}
+        else:
+            # Value Seekers
+            archetype_probs = {
+                "Groceries": 0.20, "Fuel & Transport": 0.15, "ATM Withdrawal": 0.15,
+                "Utilities": 0.10, "Salary Credit": 0.01, "Online Shopping": 0.05,
+                "EMI / Loan Payment": 0.05
+            }
+            ch_probs = {"UPI": 0.40, "ATM": 0.30, "Debit Card": 0.20, "Cash": 0.10}
+            
+        cust_cat_probs = []
+        for cat in all_categories:
+            if cat in archetype_probs:
+                cust_cat_probs.append(archetype_probs[cat])
+            elif cat in patterns.get("category_proportions", {}):
+                cust_cat_probs.append(patterns["category_proportions"][cat] * 0.2)
+            else:
+                cust_cat_probs.append(0.01)
+                
+        cust_cat_probs = np.array(cust_cat_probs)
+        cust_cat_probs /= cust_cat_probs.sum()
+        
+        trans_categories = rng.choice(all_categories, size=n_trans, p=cust_cat_probs)
 
         # --- Generate Amounts (must sum to total_amt) ---
         raw_amounts = []
@@ -279,11 +330,10 @@ def generate_transactions(
         amounts[-1] += rounding_diff
 
         # --- Generate Channels ---
-        cw = channel_weights.get(card_cat, channel_weights["Blue"])
-        ch_names = list(cw.keys())
-        ch_probs = np.array(list(cw.values()))
-        ch_probs = ch_probs / ch_probs.sum()
-        trans_channels = rng.choice(ch_names, size=n_trans, p=ch_probs)
+        ch_names = list(ch_probs.keys())
+        ch_weights = np.array(list(ch_probs.values()))
+        ch_weights = ch_weights / ch_weights.sum()
+        trans_channels = rng.choice(ch_names, size=n_trans, p=ch_weights)
 
         # --- Generate Merchant Names ---
         trans_merchants = [
@@ -514,6 +564,15 @@ def generate_campaign_responses(customers_df: pd.DataFrame) -> pd.DataFrame:
 
     logger.info("Generating campaign responses from targeting rules...")
 
+    # Define baseline campaign success modifiers (some fail, some overperform)
+    campaign_success_factors = {
+        1: 0.7,  # Underperforming
+        2: 1.6,  # Overperforming
+        3: 0.5,  # Poor performing
+        4: 1.0,  # Average
+        5: 1.3   # Good
+    }
+
     for campaign in CAMPAIGN_DEFINITIONS:
         cid = campaign["campaign_id"]
         ctype = campaign["campaign_type"]
@@ -569,16 +628,26 @@ def generate_campaign_responses(customers_df: pd.DataFrame) -> pd.DataFrame:
             if not targeted:
                 continue
 
+            # Add demographic modifiers for realism
+            demo_modifier = 1.0
+            if cust["income_bracket"] == "Above ₹15L": demo_modifier *= 1.2
+            if cust["age"] < 35: demo_modifier *= 1.15
+            if cust["total_products_held"] >= 3: demo_modifier *= 1.2
+
+            # Scale the base probability
+            final_prob = base_response_prob * campaign_success_factors.get(cid, 1.0) * demo_modifier
+            final_prob = min(final_prob, 0.95)
+
             # --- Funnel: contacted → opened → clicked → accepted ---
             was_contacted = True
 
             # Open rate depends on channel
             open_rates = {"Email": 0.45, "SMS": 0.60, "Push Notification": 0.50, "Outbound Call": 0.70, "Branch": 0.90}
-            open_prob = open_rates.get(ctype, 0.50)
+            open_prob = min(open_rates.get(ctype, 0.50) * demo_modifier, 0.95)
             was_opened = rng.random() < open_prob
 
-            was_clicked = was_opened and (rng.random() < 0.50)
-            was_accepted = was_clicked and (rng.random() < base_response_prob / 0.15)  # Scale up since we've already filtered
+            was_clicked = was_opened and (rng.random() < 0.50 * demo_modifier)
+            was_accepted = was_clicked and (rng.random() < final_prob / 0.15)  # Scale up since we've already filtered
 
             # Response date (within campaign window)
             days_range = (camp_end - camp_start).days
@@ -759,6 +828,33 @@ def run_warehouse_pipeline():
     logger.info("Step 6/6: Exporting seeded dimensions (product, campaign)...")
     export_seeded_dimensions(engine)
 
+    # Step 7: Load CLV Predictions
+    logger.info("Step 7/8: Loading CLV Predictive Model Outputs...")
+    clv_path = PATHS.OUTPUT_DATA / "customer_clv.csv"
+    if clv_path.exists():
+        clv_df = pd.read_csv(clv_path)
+        load_to_database(clv_df, "clv_predictions", engine)
+    else:
+        logger.warning(f"CLV predictions not found at {clv_path}. Run clv_model.py first.")
+
+    # Step 8: Load Segmentation Outputs
+    logger.info("Step 8/9: Loading Segmentation Outputs...")
+    seg_path = PATHS.OUTPUT_DATA / "customer_segments.csv"
+    if seg_path.exists():
+        seg_df = pd.read_csv(seg_path)
+        load_to_database(seg_df, "ml_customer_segments", engine)
+    else:
+        logger.warning(f"Segmentation outputs not found at {seg_path}. Run segmentation_model.py first.")
+
+    # Step 9: Load Churn Predictions
+    logger.info("Step 9/9: Loading Churn Predictive Model Outputs...")
+    churn_path = PATHS.OUTPUT_DATA / "churn_predictions.csv"
+    if churn_path.exists():
+        churn_df = pd.read_csv(churn_path)
+        load_to_database(churn_df, "ml_churn_predictions", engine)
+    else:
+        logger.warning(f"Churn predictions not found at {churn_path}. Run churn_model.py first.")
+
     # Validation
     logger.info("Running post-load validation...")
     _validate_warehouse(engine)
@@ -773,10 +869,13 @@ def _validate_warehouse(engine):
     with engine.connect() as conn:
         # Row counts
         tables = ["dim_customer", "dim_product", "dim_campaign", "dim_date",
-                   "fact_transactions", "fact_service_logs", "fact_campaign_responses"]
+                   "fact_transactions", "fact_service_logs", "fact_campaign_responses", "clv_predictions", "ml_customer_segments", "ml_churn_predictions"]
         for table in tables:
-            count = conn.execute(text(f"SELECT COUNT(*) FROM {SCHEMA}.{table}")).scalar()
-            logger.info(f"  {table}: {count:,} rows")
+            try:
+                count = conn.execute(text(f"SELECT COUNT(*) FROM {SCHEMA}.{table}")).scalar()
+                logger.info(f"  {table}: {count:,} rows")
+            except Exception as e:
+                logger.warning(f"  {table}: Could not count (might not exist yet)")
 
         # FK integrity: transactions referencing valid customers
         orphan_trans = conn.execute(text(f"""

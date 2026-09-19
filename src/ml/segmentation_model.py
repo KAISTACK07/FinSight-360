@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 import joblib
 import os
 from sklearn.cluster import KMeans
@@ -73,34 +73,30 @@ def run_segmentation():
     logger.info("Profiling clusters to assign business names...")
     cluster_profiles = df.groupby('cluster_id').mean()
     
-    # Logic to name clusters based on their relative feature means
-    cluster_names = {}
-    for i in range(n_clusters):
-        profile = cluster_profiles.loc[i]
+    # Dynamically assign clusters based on relative profile characteristics
+    # Premium Customers: Highest spending
+    premium_cluster = cluster_profiles['total_trans_amt_12m'].idxmax()
+    
+    # Value Seekers: Lowest spending
+    value_cluster = cluster_profiles['total_trans_amt_12m'].idxmin()
+    
+    # Remaining clusters
+    remaining_clusters = [c for c in cluster_profiles.index if c not in (premium_cluster, value_cluster)]
+    
+    # Loyal Customers: Longest tenure among the remaining
+    if cluster_profiles.loc[remaining_clusters[0], 'customer_tenure_months'] >= cluster_profiles.loc[remaining_clusters[1], 'customer_tenure_months']:
+        loyal_cluster = remaining_clusters[0]
+        growth_cluster = remaining_clusters[1]
+    else:
+        loyal_cluster = remaining_clusters[1]
+        growth_cluster = remaining_clusters[0]
         
-        if profile['total_trans_amt_12m'] > cluster_profiles['total_trans_amt_12m'].mean() * 1.5:
-            name = "1. Elite High-Spenders"
-        elif profile['credit_utilization_ratio'] > cluster_profiles['credit_utilization_ratio'].mean() * 1.5:
-            name = "2. Credit Dependent"
-        elif profile['campaign_engagements'] > cluster_profiles['campaign_engagements'].mean() * 1.2:
-            name = "3. Engaged Opportunists"
-        elif profile['total_trans_ct_12m'] < cluster_profiles['total_trans_ct_12m'].mean() * 0.5:
-            name = "4. Passive / Low Activity"
-        else:
-            name = f"Cluster {i} (General)"
-            
-        cluster_names[i] = name
-        
-    # Ensure unique names if logic overlaps
-    unique_names = list(set(cluster_names.values()))
-    if len(unique_names) < n_clusters:
-        # Fallback naming if logic isn't distinct enough
-        cluster_names = {
-            0: "Elite Spenders",
-            1: "Digital Engagers",
-            2: "Credit Dependent",
-            3: "Passive Customers"
-        }
+    cluster_names = {
+        premium_cluster: "Premium Customers",
+        loyal_cluster: "Loyal Customers",
+        growth_cluster: "Growth Customers",
+        value_cluster: "Value Seekers"
+    }
         
     df['behavioral_segment'] = df['cluster_id'].map(cluster_names)
     
@@ -126,6 +122,27 @@ def run_segmentation():
     output_path = os.path.join(output_dir, "customer_segments.csv")
     df[output_cols].to_csv(output_path, index=False)
     logger.info(f"Saved {len(df)} segment assignments to {output_path}")
+
+    # 6. Load to PostgreSQL
+    logger.info("Loading segmentation outputs to PostgreSQL database...")
+    from src.etl.config import SCHEMA
+    try:
+        # Load output data directly to PostgreSQL segmentation table
+        with engine.begin() as conn:
+            conn.execute(text(f"DROP TABLE IF EXISTS {SCHEMA}.ml_customer_segments CASCADE;"))
+            
+        df[output_cols].to_sql(
+            name="ml_customer_segments",
+            con=engine,
+            schema=SCHEMA,
+            if_exists="replace",
+            index=False,
+            method="multi",
+            chunksize=5000
+        )
+        logger.info(f"✅ Successfully loaded {len(df)} rows into {SCHEMA}.ml_customer_segments")
+    except Exception as e:
+        logger.error(f"Failed to load ml_customer_segments to PostgreSQL: {e}")
         
     logger.info("=" * 60)
     logger.info("✅ Segmentation Modeling Complete")

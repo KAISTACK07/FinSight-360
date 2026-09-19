@@ -92,9 +92,9 @@ def train_churn_model():
     top_factor_3 = []
     
     for i in range(len(df)):
-        # Get absolute SHAP values for this customer to find the most impactful features
-        customer_shap = np.abs(shap_class1[i])
-        # Get indices of top 3 features
+        # Get raw SHAP values to find features pushing TOWARDS churn (positive values)
+        customer_shap = shap_class1[i]
+        # Get indices of top 3 features (highest positive values)
         top_indices = np.argsort(customer_shap)[-3:][::-1]
         
         top_factor_1.append(feature_names[top_indices[0]])

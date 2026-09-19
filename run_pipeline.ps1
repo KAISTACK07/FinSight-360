@@ -8,3 +8,6 @@ python -m src.ml.segmentation_model
 if ($LASTEXITCODE -ne 0) { exit 1 }
 python -m src.etl.business_validation
 if ($LASTEXITCODE -ne 0) { exit 1 }
+
+python -m src.ml.campaign_propensity_model
+if ( -ne 0) { exit 1 }

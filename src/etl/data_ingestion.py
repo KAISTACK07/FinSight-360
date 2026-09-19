@@ -141,7 +141,8 @@ def localize_customer_data(df: pd.DataFrame) -> pd.DataFrame:
         (cutoff - pd.DateOffset(months=int(m))).strftime("%Y-%m-%d")
         for m in df["Months_on_book"]
     ]
-    result["customer_status"] = df["Attrition_Flag"].map(CHURN_LABEL_MAP).values
+    # We will derive customer_status realistically later, initialize with placeholder
+    result["customer_status"] = "Active"
     
     # --- Financial (scaled to INR) ---
     result["credit_limit"] = (df["Credit_Limit"] * INR_CONVERSION_FACTOR).round(-2)  # Round to nearest ₹100
@@ -151,9 +152,55 @@ def localize_customer_data(df: pd.DataFrame) -> pd.DataFrame:
     
     # --- Product & Behavior ---
     # Procedural Assignment for Business Realism
-    # Premium Card relies on income, spend, and tenure.
     income_score = result["income_bracket"].map({"Above ₹15L": 4, "₹8L - ₹15L": 3, "₹4L - ₹8L": 2, "Below ₹4L": 1}).fillna(1)
-    spend_pct = df["Total_Trans_Amt"].rank(pct=True)
+    
+    # State multiplier for revenue realism
+    state_multiplier = result["state"].map({"Maharashtra": 1.4, "Delhi": 1.35, "Karnataka": 1.25, "Gujarat": 1.15}).fillna(0.9)
+    
+    # Base amounts from Kaggle scaled realistically
+    base_amt = (df["Total_Trans_Amt"] * INR_CONVERSION_FACTOR)
+    base_ct = df["Total_Trans_Ct"].astype(float)
+    
+    # Archetype-based generation for K-Means natural clustering
+    amt_multiplier = np.ones(n)
+    ct_multiplier = np.ones(n)
+    lambda_val = np.ones(n)
+    churn_prob = np.full(n, 0.05)
+    
+    for i in range(n):
+        inc = income_score.iloc[i]
+        ten = result["customer_tenure_months"].iloc[i]
+        
+        if inc >= 3:
+            # Premium Customers (Highest amount, High freq)
+            amt_multiplier[i] = rng.uniform(2.5, 4.5)
+            ct_multiplier[i] = rng.uniform(1.2, 1.8)
+            lambda_val[i] = 4.0
+            churn_prob[i] = 0.02
+        elif ten >= 36:
+            # Loyal Customers (Medium amount, Very High freq)
+            amt_multiplier[i] = rng.uniform(1.0, 1.5)
+            ct_multiplier[i] = rng.uniform(2.0, 3.5)
+            lambda_val[i] = 2.5
+            churn_prob[i] = 0.05
+        elif rng.random() > 0.15:
+            # Growth Customers (Medium amount, Medium-High freq)
+            amt_multiplier[i] = rng.uniform(1.2, 1.6)
+            ct_multiplier[i] = rng.uniform(1.2, 2.0)
+            lambda_val[i] = 2.0
+            churn_prob[i] = 0.15
+        else:
+            # Value Seekers (Lowest amount, Lowest freq)
+            amt_multiplier[i] = rng.uniform(0.3, 0.7)
+            ct_multiplier[i] = rng.uniform(0.3, 0.8)
+            lambda_val[i] = 1.0
+            churn_prob[i] = 0.25
+            
+    result["total_trans_amt_12m"] = (base_amt * amt_multiplier * state_multiplier).round(2)
+    result["total_trans_ct_12m"] = np.clip(base_ct * ct_multiplier, 10, 500).astype(int)
+    
+    # Recalculate percentiles based on newly skewed spend
+    spend_pct = result["total_trans_amt_12m"].rank(pct=True)
     tenure_pct = result["customer_tenure_months"].rank(pct=True)
     
     premium_score = (income_score * 1.4) + (spend_pct * 2.5) + (tenure_pct * 2.0) + rng.normal(0, 1.5, size=n)
@@ -167,26 +214,24 @@ def localize_customer_data(df: pd.DataFrame) -> pd.DataFrame:
     choices = ["Platinum", "Gold", "Silver"]
     result["card_category"] = np.select(conditions, choices, default="Blue")
     
-    # Products held relies on income, spend, tenure and card category
-    base_products = np.ones(n)
-    base_products += (income_score >= 3).astype(int)
-    base_products += (spend_pct > 0.6).astype(int)
-    base_products += (spend_pct > 0.9).astype(int)
-    base_products += (tenure_pct > 0.6).astype(int)
-    base_products += (result["card_category"].isin(["Platinum", "Gold"])).astype(int)
+    # Products held relies on a Poisson distribution for a long tail
+    result["total_products_held"] = np.clip(rng.poisson(lambda_val), 1, 6)
     
-    noise = rng.integers(-1, 2, size=n)
-    result["total_products_held"] = np.clip(base_products + noise, 1, 6)
     result["months_inactive_12m"] = df["Months_Inactive_12_mon"].values
     result["contacts_count_12m"] = df["Contacts_Count_12_mon"].values
-    result["total_trans_amt_12m"] = (df["Total_Trans_Amt"] * INR_CONVERSION_FACTOR).round(2)
-    result["total_trans_ct_12m"] = df["Total_Trans_Ct"].values
     result["amt_change_q4_q1"] = df["Total_Amt_Chng_Q4_Q1"].round(4)
     result["ct_change_q4_q1"] = df["Total_Ct_Chng_Q4_Q1"].round(4)
     
+    # --- Churn Realism Override ---
+    # Override raw Kaggle Attrition_Flag with business-driven probabilities
+    churn_prob += (result["credit_utilization_ratio"] > 0.75).astype(float) * 0.15
+    churn_prob += (result["months_inactive_12m"] >= 3).astype(float) * 0.25
+    churn_prob = np.clip(churn_prob, 0.01, 0.95)
+    result["customer_status"] = np.where(rng.random(n) < churn_prob, "Churned", "Active")
+    
     # --- Derived Fields ---
     # Risk category based on utilization + inactivity + churn status
-    result["risk_category"] = _assign_risk_category(df)
+    result["risk_category"] = _assign_risk_category(result)
     
     # Preferred channel weighted by age and income
     result["preferred_channel"] = _assign_preferred_channel(df, rng)
@@ -252,11 +297,11 @@ def _assign_risk_category(df: pd.DataFrame) -> list:
     """
     risk = []
     for _, row in df.iterrows():
-        if row["Attrition_Flag"] == "Attrited Customer":
+        if row["customer_status"] == "Churned":
             risk.append("High")
-        elif (row["Avg_Utilization_Ratio"] > 0.8 and row["Months_Inactive_12_mon"] > 3):
+        elif (row["credit_utilization_ratio"] > 0.8 and row["months_inactive_12m"] > 3):
             risk.append("High")
-        elif (row["Avg_Utilization_Ratio"] > 0.5 or row["Months_Inactive_12_mon"] > 2):
+        elif (row["credit_utilization_ratio"] > 0.5 or row["months_inactive_12m"] > 2):
             risk.append("Medium")
         else:
             risk.append("Low")
