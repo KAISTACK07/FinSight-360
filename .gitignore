@@ -67,3 +67,10 @@ frontend/node_modules/
 frontend/dist/
 # Local scratch / development scripts
 scratch/
+# AWS data-lake local scratch
+infra/localstack-data/
+infra/redshift-data/
+spark-warehouse/
+metastore_db/
+derby.log
+.pytest_cache/
