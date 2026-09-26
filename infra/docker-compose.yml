@@ -1,0 +1,40 @@
+# ============================================================
+# FinSight 360 — local AWS stack ($0)
+# ============================================================
+#   docker compose -f infra/docker-compose.yml up -d
+#
+# Brings up:
+#   * LocalStack  -> emulates S3 + Lambda (real AWS APIs, free)
+#   * Postgres    -> stands in for Amazon Redshift on port 5439
+#                    (Redshift speaks the Postgres wire protocol,
+#                     so the same COPY/DDL code path is exercised)
+#
+# Swap to real AWS by clearing AWS_ENDPOINT_URL in .env and pointing
+# REDSHIFT_HOST at a Redshift Serverless endpoint — no code changes.
+# ============================================================
+services:
+  localstack:
+    image: localstack/localstack:3.5
+    container_name: finsight-localstack
+    ports:
+      - "4566:4566"          # edge port (S3, Lambda, ...)
+    environment:
+      - SERVICES=s3,lambda,iam,sts
+      - DEFAULT_REGION=ap-south-1
+      - DEBUG=0
+    volumes:
+      - "./localstack-data:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  redshift:
+    # Postgres as a local Redshift stand-in (same wire protocol).
+    image: postgres:15
+    container_name: finsight-redshift-local
+    ports:
+      - "5439:5432"          # 5439 = Redshift's conventional port
+    environment:
+      - POSTGRES_DB=customer360
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+    volumes:
+      - "./redshift-data:/var/lib/postgresql/data"

@@ -11,11 +11,53 @@ The **Customer Finance 360° Intelligence Platform** is a production-grade analy
 ## Tech Stack
 
 - **Languages:** Python (3.11), SQL
-- **Data Warehouse:** PostgreSQL (15.0)
+- **Cloud / Data Lake:** AWS S3 (bronze/silver/gold), AWS Glue, AWS Lambda
+- **Distributed Processing:** PySpark (window functions for RFM / lag / rolling / tenure)
+- **Data Warehouse:** Amazon Redshift (star schema; DISTKEY/SORTKEY) — PostgreSQL-compatible
+- **Orchestration:** Apache Airflow (event-triggered via S3 → Lambda)
+- **Data Quality / Testing:** in-pipeline gates, pytest, GitHub Actions CI
 - **Data Processing:** Pandas, NumPy
 - **Machine Learning:** Scikit-Learn, SHAP
 - **Visualization:** Power BI
 - **Version Control:** Git
+
+> **Runs at $0 locally** via LocalStack + local Spark + local Postgres, and
+> unchanged on real AWS. See **[docs/aws_architecture.md](docs/aws_architecture.md)**.
+
+---
+
+## Cloud Data Engineering (AWS)
+
+An AWS-native data-lake pipeline processes the same 10,127 customers and
+1.3M+ transactions as the base ELT, preserving every engineered feature:
+
+```mermaid
+flowchart LR
+    A[Raw CSV] -->|S3 ingest| B[(S3 · bronze)]
+    B -->|PySpark / AWS Glue| C[(S3 · silver)]
+    C -->|window functions:<br/>RFM · lag · rolling · tenure| D[(S3 · gold<br/>star schema + features)]
+    D -->|COPY FROM s3| E[(Amazon Redshift)]
+    E -->|data-quality gates| F[Analytics · Power BI · NL-SQL assistant]
+    EVT[S3 event] -.->|Lambda| ORCH[[Airflow DAG]] -.-> B
+```
+
+| Stage | Module | AWS service |
+|-------|--------|-------------|
+| Ingest → bronze | `src/aws/s3_ingest.py` | S3 |
+| Transform (Spark) | `src/aws/spark_transform.py`, `glue_job.py` | Glue |
+| Warehouse load | `src/aws/redshift_ddl.sql`, `redshift_load.py` | Redshift |
+| Orchestration | `dags/finsight_pipeline_dag.py` | Airflow |
+| Event trigger | `lambda/s3_trigger_lambda.py` | Lambda |
+| Quality gates + CI | `src/aws/data_quality.py`, `.github/workflows/ci.yml` | — |
+
+**Quickstart (local, $0):**
+
+```bash
+pip install -r requirements.txt -r requirements-aws.txt
+cp .env.aws.example .env
+make up && make bootstrap && make pipeline   # ingest → transform → load → validate
+make test                                    # ruff + pytest
+```
 
 ---
 
