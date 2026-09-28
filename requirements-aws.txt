@@ -1,0 +1,32 @@
+# ============================================================
+# FinSight 360 — AWS Data Engineering layer dependencies
+# ============================================================
+# Install alongside the base requirements.txt:
+#   pip install -r requirements.txt -r requirements-aws.txt
+#
+# Everything here runs locally (LocalStack + local Spark) at $0,
+# and unchanged against real AWS (S3 / Glue / Redshift / Lambda).
+# ------------------------------------------------------------
+
+# --- Spark (local dev; AWS Glue provides its own runtime) ---
+pyspark==3.5.1
+
+# --- AWS SDK + S3 access ---
+boto3>=1.34.0
+botocore>=1.34.0
+
+# --- Redshift / Postgres load path ---
+psycopg2-binary>=2.9.9
+sqlalchemy>=2.0.0
+
+# --- Orchestration (Airflow runs locally in Docker; this pin is
+#     only for import-time DAG parsing / linting in CI) ---
+apache-airflow==2.9.3
+
+# --- Data quality + testing ---
+pytest>=8.0.0
+pandas>=2.0.0
+pyarrow>=15.0.0
+
+# --- Lint / format (CI) ---
+ruff>=0.5.0
